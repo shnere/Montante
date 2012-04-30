@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Método Montante</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Resolucion de ecuaciones por el metodo de montante.">
+    <meta name="author" content="Guillermo Hernandez Molina, Alan Rodriguez Romero">
+
+    <!-- Le styles -->
+    <link href="css/bootstrap.css" rel="stylesheet">
+    <style>
+      body {
+        padding-top: 60px; /* 60px to make the container go all the way to the bottom of the topbar */
+      }
+	.hidden {
+		display: none;
+		visibility: hidden;
+	}
+    </style>
+    <link href="css/bootstrap-responsive.css" rel="stylesheet">
+
+    <!-- Le HTML5 shim, for IE6-8 support of HTML5 elements -->
+    <!--[if lt IE 9]>
+      <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+
+	<!-- Le scripts -->
+	<script src="js/jquery.js"></script>
+
+    <!-- Le fav and touch icons -->
+    <!-- <link rel="shortcut icon" href="../assets/ico/favicon.ico"> -->
+  </head>
+
+<script>
+	var now = new Date();
+	var now_millisecs = now.valueOf();
+	$(document).ready(function() {
+
+		/* Manejo de tabla
+		-------------------------------------------------- */
+		var ecuaciones = 2;
+		
+		function grafica_tabla(){
+			tabla = '<table id="tabla_int" class="table table-striped table-bordered table-condensed"><thead>';
+			tabla += '<tr><th colspan="' + ecuaciones + '">Coeficientes</th><th>Resultado</th></tr>';
+			tabla += '<tbody>';
+			if(ecuaciones>3){
+				span=1;
+			}else{
+				span=2;
+			}
+			for(i=0; i<ecuaciones;i++){
+				tabla += '<tr>';
+				for(j=0; j<ecuaciones;j++){
+					
+					tabla += '<td><input class="span'+span+'" type="text" placeholder="Inserte coeficiente" value=""></td>';
+				}
+					tabla += '<td><input class="resultado span'+span+'" type="text" value=""></td>';
+				tabla += '</tr>';
+			}
+			tabla += '</tbody></table>';
+			$('#table').html(tabla);
+		}
+		
+		function recibe_inputs(){
+			mat = Array();
+			mat[0] = Array();
+			i = 0;
+			$('#tabla_int input').each(function(index){
+				j = index%(ecuaciones+1);
+				mat[i][j] = $(this).val();
+				if(j == ecuaciones && i < ecuaciones-1){
+					i++;
+					mat[i] = Array();
+				}
+			});
+			return mat;
+		}
+		
+		$("#calcular_montante").click(function(event){
+			$('#resultados').removeClass('hidden');
+			$('#pasosResultado').html('');
+			now = new Date();
+			now_millisecs = now.valueOf();
+			resm = montante_solve(recibe_inputs(),"pasosResultado");
+			resa = montante_answers(resm,"pasosResultado");
+		});
+		$("#agregar_ecuacion").click(function(event){
+			ecuaciones++;
+			grafica_tabla();
+		});
+		
+		$("#eliminar_ecuacion").click(function(event){
+			ecuaciones--;
+			grafica_tabla();
+		});
+	});
+	
+	
+	/* Montante
+	-------------------------------------------------- */
+	
+	/*
+		printMatrix(a)
+			Regresa el toString de una matriz.
+		@param
+			a	Matriz de 2 dimensiones
+		@return
+			string Contiene el resultado en String
+	*/
+	function printMatrix(a){
+		str = "";
+		nr	=	a.length;
+		for(i=0;i<nr;i++){
+			nc	= a[i].length;
+			str2 = ""
+			for(j=0;j<nc;j++){
+				if(j!=0){
+					str2	+= ", " + a[i][j];
+				}else{
+					str2	+= " " + a[i][j];	
+				}
+			}
+			str += "[ " + str2 + " ]<br>";
+		}
+		return str;
+	}
+	/*
+		printArray(a)
+			Regresa el toString de un Arreglo
+		@param
+			a	Arreglo de 1 dimension
+		@return
+			string Contiene el resultado en String
+	*/
+	function printArray(a){
+		str = "";
+		nr	=	a.length;
+		for(i=0;i<nr;i++){
+			if(i!=0){
+				str	+= ", " + a[i];
+			}else{
+				str	+= " " + a[i];	
+
+			}
+		}
+		return "[ " + str + " ]\n";
+	}
+
+	/*
+		montante_solve(a)
+			Resuelve un sistema de ecuaciones por el metodo de montante
+		@param
+			a	Matriz de 2 dimensiones de N X N+1
+		@return
+			m	Matriz de Coeficientes resuelta por el método de montante
+	*/
+	np = 0;
+	tt = 0;
+	function montante_solve(a,idElemento){
+		numPasos = 1;
+		mInicialStr = printMatrix(a);
+		StrReturn = '<div class="well" style="overflow:hidden;"><h3>Paso 0 - Matriz Inicial</h3><br>';
+		StrReturn += '<div class="span6">' + mInicialStr + '</div>';
+		StrReturn += '</div>';
+		$('#'+idElemento).append(StrReturn);
+		// Recupero el tamaño de la matriz
+		nr	=	a.length;
+		// Necesita ser una matriz de N x N+1
+		nc	=	nr+1;
+		// Vamos a trabajar en una copia del Arreglo
+		m	=	a;
+		// Declaro indice del Pivote previo
+		p_pre	=	1;
+		for(t=0; t< nr;t++){
+			StrReturn = '<div class="well" style="overflow:hidden;"><h3>Paso '+numPasos+'</h3><br>';
+			// El Pivote actual
+			p	=	m[t][t];
+			for(k=0; k<t; k++){
+				m[k][k]	=	p;
+			}
+			StrReturn += '<div class="span6"><strong>Inicio de la interación: </strong><br><br>' + printMatrix(m) + '<br><br><strong>Pivote:</strong> '+p+'</div>';
+			// Empiezo la anidación de ciclos
+			for(i=0; i < nr;i++){
+				for(j=(t+1);j<nc;j++){
+					if(i!=t){
+						m[i][j] = ( p * m[i][j] - m[i][t] * m[t][j] ) / p_pre;
+					}
+				}
+			}
+			p_pre = p
+			for(k=0; k<nr; k++){
+				m[k][t] = 0;
+			}
+			
+			StrReturn += '<div class="span5"><strong>Fin de la iteración:</strong> <br><br>' + printMatrix(m) + '</div>';
+			StrReturn += '</div>';
+			$('#'+idElemento).append(StrReturn);
+			numPasos++;
+		}
+		StrReturn = '<div class="well"  style="overflow:hidden;"><h3>Paso '+numPasos+' - Matriz Final</h3><br>';
+		StrReturn += '<div class="span6">' + printMatrix(m) + '</div>';
+		StrReturn += '</div>';
+		$('#'+idElemento).append(StrReturn);
+		np = numPasos;
+		return m;
+	}
+
+	/*
+		montante_answers(a)
+			Devuelve la respuesta al sistema de ecuaciones con una matriz resuelta por montante
+		@param
+			a	Matriz de 2 dimensiones de N X N+1 previamente resuelta por el método de montante
+		@return
+			m	Matriz de respuestas.
+	*/
+	function montante_answers(a,idElemento){
+		p 	=	a[0][0];
+		nr	=	a.length;
+		m	=	Array();
+		now = new Date();
+		StrReturn = '<div class="well"  style="overflow:hidden;"><h3>Resultados</h3><br><div class="span6">';
+		StrReturn += '<strong>Numero de Iteraciones:</strong> ' + np + '<br>';
+		StrReturn += '<strong>Tiempo Procesamiento:</strong> ' + (now.valueOf() - now_millisecs) + ' milisegundos.<br>';
+		StrReturn += '<strong>Dividendo:</strong> ' +p + '<br><br>';
+		for(i=0;i<nr;i++){
+			m[i]	=	a[i][(nr)]/p;
+			StrReturn += '<strong>Variable ' + i + ' :</strong> ' + a[i][(nr)] + '/' + p + ' = ' + m[i] + '<br>';
+		}
+		
+		StrReturn += '</div></div>';
+		$('#'+idElemento).append(StrReturn);
+		return m;
+	}
+	
+	
+</script>
+
+
+  <body>
+
+<div class="navbar navbar-fixed-top">
+	<div class="navbar-inner">
+		<div class="container">
+			<a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+				<span class="icon-bar"></span>
+				<span class="icon-bar"></span>
+				<span class="icon-bar"></span>
+			</a>
+			<a class="brand" href="#">Resolución de Ecuaciones</a>
+		</div>
+	</div>
+</div>
+
+    <div class="container">
+		<div class="tabbable">
+			<ul class="nav nav-pills">
+				<li class="active"><a href="#montante" data-toggle="tab">Método Montante</a></li>
+				<li class=""><a href="#instrucciones" data-toggle="tab">Instrucciones</a></li>
+				<li class=""><a href="#metodo" data-toggle="tab">El Método de Montante</a></li>
+			</ul>
+		
+			<div class="tab-content">
+				<div class="tab-pane" id="metodo">
+					<h2>El Método de Montante</h2><br>
+					<h3>Introducción</h3><br>
+					<p>
+						El método de montante es un algoritmo del álgebra lineal para determinar las soluciones de un sistema de ecuaciones lineales, encontrar matrices inversas, matrices de adjuntos y determinantes.
+						<br><br>
+						Este método fue desarrollado por René Mario Montante Pardo, Ingeniero mecánico de nacionalidad mexicana proveniente de la universidad de León.
+					</p>
+					<br><h3>Ventajas</h3><br>
+					<p>
+						La principal ventaja del método es que trabaja exclusivamente con operaciones aritméticas de enteros por lo que el error por redondeo es mucho menor que con otros métodos.
+					</p>
+					<br><h3>El Método</h3><br>
+					<p>
+						El método trata de ir “pivoteando” en manera diagonal por la matriz. Se inicia en la esquina superior izquierda, la columna y renglón base se toma conforme a la posición actual del pivote.
+						<br><br>
+						Conforme estas columna-renglón se forman determinantes de dos por dos, y siempre se trabaja con números enteros, si hay alguna fracción hay un error.
+						<br><br>
+						Para resolver el siguiente valor, se utiliza la siguiente formula:<br><br>
+						<img src="img/formulaMontante.png" width="400" alt="FormulaMontante">
+						<br><br>
+						En donde:<br>
+						<strong>N.E.</strong> = Nuevo elemento<br>
+						<strong>P</strong> = Pivote<br>
+						<strong>E.A.</strong> = Elemento Actual<br>
+						<strong>E.C.F.P.</strong> = Elemento Correspondiente a la fila del pivote<br>
+						<strong>E.C.C.P.</strong> = Elemento Correspondiente a la columna del pivote<br>
+						<strong>P.A.</strong> = Pivote Anterior
+					</p>
+
+				</div>
+				<div class="tab-pane" id="instrucciones">
+					<h2>Instrucciones</h2>
+					<ol>
+						<li>Selecciona el numero de ecuaciones del sistema dando clic en los botones de <strong>Eliminar Ecuación</strong> y <strong>Agregar Ecuación</strong></li>
+						<li>Inserta tu sistema de ecuaciones en la tabla correspondiente, dicho sistema está expresado en forma de matrices.</li>
+						<li>Da clic en el botón <strong>Calcular Ecuación</strong></li>
+						<li>Evalúa los resultados obtenidos</li>
+					</ol>
+				</div>
+				<div class="tab-pane active" id="montante">
+					<h2>Resolución por medio del método de Montante</h2>
+					<div class="row-fluid">
+						<div class="span8">
+							<div id="table">
+								<table id ="tabla_int" class="table table-striped table-bordered table-condensed">
+									<thead>
+										<tr>
+											<!-- Variables -->
+											<th colspan="2">Coeficientes</th>
+											<th>Resultado</th>
+										</tr>
+									</thead>
+									<tbody>
+										<tr>
+											<td><input class="span" type="text" placeholder="Inserte coeficiente" value=""></td>
+											<td><input class="span" type="text" placeholder="Inserte coeficiente" value=""></td>
+											<td><input class="span" type="text" value=""></td>
+										</tr>
+										<tr>
+											<td><input class="span" type="text" placeholder="Inserte coeficiente" value=""></td>
+											<td><input class="span" type="text" placeholder="Inserte coeficiente" value=""></td>
+											<td><input class="resultado span" type="text" value=""></td>
+										</tr>
+									</tbody>
+								</table>
+							</div>
+							<button class="btn btn-large btn-primary" id="calcular_montante"><i class="icon-ok icon-white"></i> Calcular Ecuación</button>
+						</div> <!-- /div.span8 -->
+						<div class="span2" style="">
+							<button class="btn btn-large btn-danger" id="eliminar_ecuacion"><i class="icon-minus icon-white"></i> Eliminar Ecuación</button>
+						</div> <!-- /div.span2 -->
+						<div class="span2">
+							<button class="btn btn-large btn-success" id="agregar_ecuacion"><i class="icon-plus icon-white"></i> Agregar Ecuación</button>
+						</div> <!-- /div.span2 -->
+					</div> <!-- /div.row-fluid -->
+					<div id="resultados" class="row-fluid hidden" style="margin-top: 20px">
+						<h2>Resultados</h2>
+						<div id="pasosResultado" class="row-fluid" style="margin-top: 10px">
+						
+						
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	
+
+    </div> <!-- /container -->
+
+    <!-- Le javascript
+    ================================================== -->
+    <!-- Placed at the end of the document so the pages load faster -->
+    <script src="js/jquery.js"></script>
+    <script src="js/bootstrap.js"></script>
+
+  </body>
+</html>
